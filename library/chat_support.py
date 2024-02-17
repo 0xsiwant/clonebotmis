@@ -1,17 +1,16 @@
-#----------------------------------- https://github.com/m4mallu/clonebot ----------------------------------------------#
 import os
 import csv
 import time
 import shutil
 import asyncio
 import itertools
-from presets import Presets
 from datetime import datetime
-from library.sql import reset_all
 from pyrogram.errors import FloodWait
-from plugins.cb_input import update_type_buttons
+from pyrogram.types import MessageMediaPhoto, MessageMediaVideo
 from pyrogram.enums import ChatType, ChatMemberStatus
-from library.sql import file_types, msg_id_limit, to_msg_id_cnf_db, master_index
+from library.sql import reset_all, file_types, msg_id_limit, to_msg_id_cnf_db, master_index
+from presets import Presets
+from plugins.cb_input import update_type_buttons
 
 
 # Function to find last message id of supported types
@@ -102,7 +101,7 @@ async def date_time_calc(start_date, start_time, cur_date, cur_time):
     return f'{date_diff}D', time_diff
 
 
-# Functions to set the bot vaiables to default values
+# Functions to set the bot variables to default values
 async def set_to_defaults(id):
     await reset_all(id)
     file_types.clear()
@@ -110,15 +109,15 @@ async def set_to_defaults(id):
     await update_type_buttons()
 
 
-# function to get the chat type of the source/target chat
+# Function to get the chat type of the source/target chat
 async def get_chat_type(chat_status):
     x = chat_status.type
     chat_status = {
-                           x == ChatType.CHANNEL: 'CHANNEL',
-                           x == ChatType.SUPERGROUP: 'SUPERGROUP',
-                           x == ChatType.GROUP: 'GROUP',
-                           x == ChatType.PRIVATE: 'PRIVATE',
-                           x == ChatType.BOT: 'BOT'
+        x == ChatType.CHANNEL: 'CHANNEL',
+        x == ChatType.SUPERGROUP: 'SUPERGROUP',
+        x == ChatType.GROUP: 'GROUP',
+        x == ChatType.PRIVATE: 'PRIVATE',
+        x == ChatType.BOT: 'BOT'
     }.get(True)
     return chat_status
 
@@ -127,11 +126,35 @@ async def get_chat_type(chat_status):
 async def get_chat_member_status(member):
     x = member.status
     chat_member_status = {
-                           x == ChatMemberStatus.OWNER: 'OWNER',
-                           x == ChatMemberStatus.ADMINISTRATOR: 'ADMINISTRATOR',
-                           x == ChatMemberStatus.MEMBER: 'MEMBER',
-                           x == ChatMemberStatus.RESTRICTED: 'RESTRICTED',
-                           x == ChatMemberStatus.LEFT: 'LEFT',
-                           x == ChatMemberStatus.BANNED: 'BANNED'
+        x == ChatMemberStatus.OWNER: 'OWNER',
+        x == ChatMemberStatus.ADMINISTRATOR: 'ADMINISTRATOR',
+        x == ChatMemberStatus.MEMBER: 'MEMBER',
+        x == ChatMemberStatus.RESTRICTED: 'RESTRICTED',
+        x == ChatMemberStatus.LEFT: 'LEFT',
+        x == ChatMemberStatus.BANNED: 'BANNED'
     }.get(True)
     return chat_member_status
+
+
+# Function to forward album messages
+async def forward_album(client, source_chat_id, target_chat_id, album_messages):
+    try:
+        for album_message in album_messages:
+            await client.forward_messages(target_chat_id, source_chat_id, album_message.message_id)
+            # You can add a small delay here if needed to avoid FloodWait restrictions
+            await asyncio.sleep(0.5)  # Adjust as per your need
+    except FloodWait as e:
+        await asyncio.sleep(e.x)  # Wait for the specified delay by Telegram (e.x seconds)
+    except Exception as e:
+        print("Error:", e)
+
+
+# Function to clone albums
+async def clone_albums(client, source_chat_id, target_chat_id):
+    try:
+        async for message in client.iter_history(source_chat_id):
+            if message.media_album_id:
+                album_messages = await client.get_messages(source_chat_id, message_ids=message.media_album_id)
+                await forward_album(client, source_chat_id, target_chat_id, album_messages)
+    except Exception as e:
+        print("Error:", e)
