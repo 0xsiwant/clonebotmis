@@ -136,25 +136,48 @@ async def get_chat_member_status(member):
     return chat_member_status
 
 
-# Function to forward album messages
+# Import library yang diperlukan
+import os
+import csv
+import time
+import shutil
+import asyncio
+import itertools
+from datetime import datetime
+from pyrogram.errors import FloodWait
+from pyrogram.types import MessagePhoto, MessageVideo
+from pyrogram.enums import ChatType, ChatMemberStatus
+from library.sql import reset_all, file_types, msg_id_limit, to_msg_id_cnf_db, master_index
+from presets import Presets
+from plugins.cb_input import update_type_buttons
+
+
+# Function untuk meneruskan pesan album
 async def forward_album(client, source_chat_id, target_chat_id, album_messages):
     try:
+        # Cek jika pesan adalah media foto atau video
         for album_message in album_messages:
-            await client.forward_messages(target_chat_id, source_chat_id, album_message.message_id)
-            # You can add a small delay here if needed to avoid FloodWait restrictions
-            await asyncio.sleep(0.5)  # Adjust as per your need
+            if isinstance(album_message, (MessagePhoto, MessageVideo)):
+                # Meneruskan pesan album ke obrolan target
+                await client.forward_messages(target_chat_id, source_chat_id, album_message.message_id)
+                # Tambahkan penundaan kecil jika perlu untuk menghindari pembatasan FloodWait
+                await asyncio.sleep(0.5)  # Sesuaikan sesuai kebutuhan Anda
     except FloodWait as e:
-        await asyncio.sleep(e.x)  # Wait for the specified delay by Telegram (e.x seconds)
+        await asyncio.sleep(e.x)  # Tunggu jeda yang ditentukan oleh Telegram (e.x detik)
     except Exception as e:
         print("Error:", e)
 
-
-# Function to clone albums
+# Function untuk mendeteksi dan meneruskan album dalam obrolan
 async def clone_albums(client, source_chat_id, target_chat_id):
     try:
-        async for message in client.iter_history(source_chat_id):
+        async for message in client.USER.get_chat_history(source_chat_id):
+            # Cek jika pesan memiliki media album
             if message.media_album_id:
-                album_messages = await client.get_messages(source_chat_id, message_ids=message.media_album_id)
+                # Mendapatkan pesan-pesan dalam album
+                album_messages = await client.USER.get_messages(source_chat_id, message_ids=message.media_album_id)
+                # Meneruskan setiap pesan dalam album
                 await forward_album(client, source_chat_id, target_chat_id, album_messages)
     except Exception as e:
         print("Error:", e)
+
+# Fungsi lainnya tetap seperti sebelumnya
