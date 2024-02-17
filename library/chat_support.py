@@ -5,13 +5,13 @@ import shutil
 import asyncio
 import itertools
 from datetime import datetime
+from pyrogram import Client
 from pyrogram.errors import FloodWait
-from pyrogram.types import MessageMediaPhoto, MessageMediaVideo
+from pyrogram.types import MessagePhoto, MessageVideo
 from pyrogram.enums import ChatType, ChatMemberStatus
 from library.sql import reset_all, file_types, msg_id_limit, to_msg_id_cnf_db, master_index
 from presets import Presets
 from plugins.cb_input import update_type_buttons
-
 
 # Function to find last message id of supported types
 async def find_msg_id(client, id, chat_id):
@@ -33,7 +33,6 @@ async def find_msg_id(client, id, chat_id):
     except Exception:
         pass
 
-
 # Function to find percentage of the total process
 async def calc_percentage(sp, ep, msg_id):
     const = pct = int()
@@ -41,13 +40,11 @@ async def calc_percentage(sp, ep, msg_id):
     pct = ((msg_id + const) - ep) / const * 100  # Credits to my wife to find a formula !
     return pct
 
-
 # Function to show the process graph
 async def calc_progress(pct):
     progress = int()
     progress = (int(pct)//10 * "◼" + (10-int(pct)//10) * "◻")
     return progress
-
 
 # Function to find DC ID:
 async def find_dc(chat_status):
@@ -55,7 +52,6 @@ async def find_dc(chat_status):
     dc_id = {dc == 1: "𝙼𝚒𝚊𝚖𝚒 𝙵𝙻, 𝚄𝚂𝙰 [𝐃𝐂 𝟏]", dc == 2: "𝙰𝚖𝚜𝚝𝚎𝚛𝚍𝚊𝚖, 𝙽𝙻 [𝐃𝐂 𝟐]", dc == 3: "𝙼𝚒𝚊𝚖𝚒 𝙵𝙻, 𝚄𝚂𝙰 [𝐃𝐂 𝟑]",
              dc == 4: "𝙰𝚖𝚜𝚝𝚎𝚛𝚍𝚊𝚖, 𝙽𝙻 [𝐃𝐂 𝟒]", dc == 5: "𝐒𝐢𝐧𝐠𝐚𝐩𝐨𝐫𝐞, 𝐒𝐆 [𝐃𝐂 𝟓]"}.get(True)
     return dc_id
-
 
 # Function to save the target chat index.
 async def save_target_cfg(id, target_chat):
@@ -67,7 +63,6 @@ async def save_target_cfg(id, target_chat):
     with open(save_csv_path, 'w') as file:
         wr = csv.writer(file, quoting=csv.QUOTE_ALL)
         wr.writerow(master_index)
-
 
 # Function to import the cfg data to master list
 async def import_cfg_data(id, target_chat):
@@ -83,7 +78,6 @@ async def import_cfg_data(id, target_chat):
         except Exception:
             pass
 
-
 # Function to remove the cfg files stored by the user.
 async def del_user_cfg(id):
     cfg_path = os.getcwd() + "/" + "cfg" + "/" + str(id)
@@ -93,13 +87,11 @@ async def del_user_cfg(id):
         except Exception:
             pass
 
-
 # Function to calculate the time and date difference between two dates
 async def date_time_calc(start_date, start_time, cur_date, cur_time):
     time_diff = time.strftime("%Hh %Mm", time.gmtime(cur_time - start_time))
     date_diff = (datetime.strptime(cur_date, "%d/%m/%y") - datetime.strptime(start_date, "%d/%m/%y")).days
     return f'{date_diff}D', time_diff
-
 
 # Functions to set the bot variables to default values
 async def set_to_defaults(id):
@@ -107,7 +99,6 @@ async def set_to_defaults(id):
     file_types.clear()
     file_types.extend(Presets.FILE_TYPES)
     await update_type_buttons()
-
 
 # Function to get the chat type of the source/target chat
 async def get_chat_type(chat_status):
@@ -120,7 +111,6 @@ async def get_chat_type(chat_status):
         x == ChatType.BOT: 'BOT'
     }.get(True)
     return chat_status
-
 
 # Function to get the status of the chat member in groups and supergroups
 async def get_chat_member_status(member):
@@ -135,49 +125,33 @@ async def get_chat_member_status(member):
     }.get(True)
     return chat_member_status
 
-
-# Import library yang diperlukan
-import os
-import csv
-import time
-import shutil
-import asyncio
-import itertools
-from datetime import datetime
-from pyrogram.errors import FloodWait
-from pyrogram.types import MessagePhoto, MessageVideo
-from pyrogram.enums import ChatType, ChatMemberStatus
-from library.sql import reset_all, file_types, msg_id_limit, to_msg_id_cnf_db, master_index
-from presets import Presets
-from plugins.cb_input import update_type_buttons
-
-
-# Function untuk meneruskan pesan album
+# Function to forward an album
 async def forward_album(client, source_chat_id, target_chat_id, album_messages):
     try:
-        # Cek jika pesan adalah media foto atau video
         for album_message in album_messages:
             if isinstance(album_message, (MessagePhoto, MessageVideo)):
-                # Meneruskan pesan album ke obrolan target
                 await client.forward_messages(target_chat_id, source_chat_id, album_message.message_id)
-                # Tambahkan penundaan kecil jika perlu untuk menghindari pembatasan FloodWait
-                await asyncio.sleep(0.5)  # Sesuaikan sesuai kebutuhan Anda
+                await asyncio.sleep(0.5)
     except FloodWait as e:
-        await asyncio.sleep(e.x)  # Tunggu jeda yang ditentukan oleh Telegram (e.x detik)
+        await asyncio.sleep(e.x)
     except Exception as e:
         print("Error:", e)
 
-# Function untuk mendeteksi dan meneruskan album dalam obrolan
+# Function to clone albums
 async def clone_albums(client, source_chat_id, target_chat_id):
     try:
         async for message in client.USER.get_chat_history(source_chat_id):
-            # Cek jika pesan memiliki media album
             if message.media_album_id:
-                # Mendapatkan pesan-pesan dalam album
                 album_messages = await client.USER.get_messages(source_chat_id, message_ids=message.media_album_id)
-                # Meneruskan setiap pesan dalam album
                 await forward_album(client, source_chat_id, target_chat_id, album_messages)
     except Exception as e:
         print("Error:", e)
 
-# Fungsi lainnya tetap seperti sebelumnya
+# Fungsi untuk memulai dan menjalankan bot
+async def start_bot():
+    async with Client("my_account") as client:
+        await clone_albums(client, "source_chat_id", "target_chat_id")
+
+# Menjalankan bot
+if __name__ == "__main__":
+    asyncio.run(start_bot())
