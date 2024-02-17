@@ -1,17 +1,18 @@
+#----------------------------------- https://github.com/m4mallu/clonebot ----------------------------------------------#
 import os
 import csv
 import time
 import shutil
 import asyncio
 import itertools
-from datetime import datetime
-from pyrogram import Client
-from pyrogram.errors import FloodWait
-from pyrogram.types import MessagePhoto, MessageVideo
-from pyrogram.enums import ChatType, ChatMemberStatus
-from library.sql import reset_all, file_types, msg_id_limit, to_msg_id_cnf_db, master_index
 from presets import Presets
+from datetime import datetime
+from library.sql import reset_all
+from pyrogram.errors import FloodWait
 from plugins.cb_input import update_type_buttons
+from pyrogram.enums import ChatType, ChatMemberStatus
+from library.sql import file_types, msg_id_limit, to_msg_id_cnf_db, master_index
+
 
 # Function to find last message id of supported types
 async def find_msg_id(client, id, chat_id):
@@ -33,6 +34,7 @@ async def find_msg_id(client, id, chat_id):
     except Exception:
         pass
 
+
 # Function to find percentage of the total process
 async def calc_percentage(sp, ep, msg_id):
     const = pct = int()
@@ -40,11 +42,13 @@ async def calc_percentage(sp, ep, msg_id):
     pct = ((msg_id + const) - ep) / const * 100  # Credits to my wife to find a formula !
     return pct
 
+
 # Function to show the process graph
 async def calc_progress(pct):
     progress = int()
     progress = (int(pct)//10 * "◼" + (10-int(pct)//10) * "◻")
     return progress
+
 
 # Function to find DC ID:
 async def find_dc(chat_status):
@@ -52,6 +56,7 @@ async def find_dc(chat_status):
     dc_id = {dc == 1: "𝙼𝚒𝚊𝚖𝚒 𝙵𝙻, 𝚄𝚂𝙰 [𝐃𝐂 𝟏]", dc == 2: "𝙰𝚖𝚜𝚝𝚎𝚛𝚍𝚊𝚖, 𝙽𝙻 [𝐃𝐂 𝟐]", dc == 3: "𝙼𝚒𝚊𝚖𝚒 𝙵𝙻, 𝚄𝚂𝙰 [𝐃𝐂 𝟑]",
              dc == 4: "𝙰𝚖𝚜𝚝𝚎𝚛𝚍𝚊𝚖, 𝙽𝙻 [𝐃𝐂 𝟒]", dc == 5: "𝐒𝐢𝐧𝐠𝐚𝐩𝐨𝐫𝐞, 𝐒𝐆 [𝐃𝐂 𝟓]"}.get(True)
     return dc_id
+
 
 # Function to save the target chat index.
 async def save_target_cfg(id, target_chat):
@@ -63,6 +68,7 @@ async def save_target_cfg(id, target_chat):
     with open(save_csv_path, 'w') as file:
         wr = csv.writer(file, quoting=csv.QUOTE_ALL)
         wr.writerow(master_index)
+
 
 # Function to import the cfg data to master list
 async def import_cfg_data(id, target_chat):
@@ -78,6 +84,7 @@ async def import_cfg_data(id, target_chat):
         except Exception:
             pass
 
+
 # Function to remove the cfg files stored by the user.
 async def del_user_cfg(id):
     cfg_path = os.getcwd() + "/" + "cfg" + "/" + str(id)
@@ -87,45 +94,49 @@ async def del_user_cfg(id):
         except Exception:
             pass
 
+
 # Function to calculate the time and date difference between two dates
 async def date_time_calc(start_date, start_time, cur_date, cur_time):
     time_diff = time.strftime("%Hh %Mm", time.gmtime(cur_time - start_time))
     date_diff = (datetime.strptime(cur_date, "%d/%m/%y") - datetime.strptime(start_date, "%d/%m/%y")).days
     return f'{date_diff}D', time_diff
 
-# Functions to set the bot variables to default values
+
+# Functions to set the bot vaiables to default values
 async def set_to_defaults(id):
     await reset_all(id)
     file_types.clear()
     file_types.extend(Presets.FILE_TYPES)
     await update_type_buttons()
 
-# Function to get the chat type of the source/target chat
+
+# function to get the chat type of the source/target chat
 async def get_chat_type(chat_status):
     x = chat_status.type
     chat_status = {
-        x == ChatType.CHANNEL: 'CHANNEL',
-        x == ChatType.SUPERGROUP: 'SUPERGROUP',
-        x == ChatType.GROUP: 'GROUP',
-        x == ChatType.PRIVATE: 'PRIVATE',
-        x == ChatType.BOT: 'BOT'
+                           x == ChatType.CHANNEL: 'CHANNEL',
+                           x == ChatType.SUPERGROUP: 'SUPERGROUP',
+                           x == ChatType.GROUP: 'GROUP',
+                           x == ChatType.PRIVATE: 'PRIVATE',
+                           x == ChatType.BOT: 'BOT'
     }.get(True)
     return chat_status
+
 
 # Function to get the status of the chat member in groups and supergroups
 async def get_chat_member_status(member):
     x = member.status
     chat_member_status = {
-        x == ChatMemberStatus.OWNER: 'OWNER',
-        x == ChatMemberStatus.ADMINISTRATOR: 'ADMINISTRATOR',
-        x == ChatMemberStatus.MEMBER: 'MEMBER',
-        x == ChatMemberStatus.RESTRICTED: 'RESTRICTED',
-        x == ChatMemberStatus.LEFT: 'LEFT',
-        x == ChatMemberStatus.BANNED: 'BANNED'
+                           x == ChatMemberStatus.OWNER: 'OWNER',
+                           x == ChatMemberStatus.ADMINISTRATOR: 'ADMINISTRATOR',
+                           x == ChatMemberStatus.MEMBER: 'MEMBER',
+                           x == ChatMemberStatus.RESTRICTED: 'RESTRICTED',
+                           x == ChatMemberStatus.LEFT: 'LEFT',
+                           x == ChatMemberStatus.BANNED: 'BANNED'
     }.get(True)
     return chat_member_status
-
-# Function to forward an album
+    
+    # Function to forward an album
 async def forward_album(client, source_chat_id, target_chat_id, album_messages):
     try:
         for album_message in album_messages:
